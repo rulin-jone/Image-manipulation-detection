@@ -319,16 +319,12 @@ class vgg16(Network):
             rois, roi_scores = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
             # 获取2000个proposals
             rpn_lables = self._anchor_target_layer(rpn_cls_score, "anchor")
-            # anchor_target _layer()函数的目的就是为每个位置的9个anchors生成表示正负样本的标签和回归的目标值，以及权重，提供给RPN进行训练。
-            # 计算每个anchor的label值
-            # 1：正样本  0：负样本   -1：非样本，不用于训练
+           
 
             # Try to have a deterministic order for the computing graph, for reproducibility
             with tf.control_dependencies([rpn_lables]):
                 rois, _ = self._proposal_target_layer(rois, roi_scores, "rpn_rois")
-                # 选取BATCH_SIZE个正样本和负样本作为训练的一个mini batch
-                # 这一步的作用是给RPN提供的proposal分配标签，计算proposals和gt boxes的偏移量，用于最后一层(bbox_pred)回归参数的学习
-                # 从之前RPN给出的2000个proposal中选出BATCH_SIZE(128, 其中25%是前景, 75%是背景)作为训练的一批。
+               
         else:
             if cfg.FLAGS.test_mode == 'nms':
                 rois, _ = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
@@ -346,13 +342,13 @@ class vgg16(Network):
         # pool5_flat = slim.flatten(pool5, scope='flatten')
         pool5_forNoise = self._crop_pool_layer(net2, rois, "pool5_forNoise")
 
-        # 将两个网络输入双线性池化层compact bilinear pooling进行特征融合
+        # 将两个网络输入双线性池化层
         cbp = compact_bilinear_pooling_layer(pool5, pool5_forNoise, 512)
-        # 都为512x7x7，输出为512维
+        
         cbp_flat = slim.flatten(cbp, scope='cbp_flatten')
-        # 展开
+        
 
-        # 全连接层fully connected layers
+        
         # fc6 = slim.fully_connected(pool5_flat, 4096, scope='bbox_fc6')
         fc6_cbp = slim.fully_connected(cbp_flat, 4096, scope='fc6')
         if is_training:
@@ -366,9 +362,7 @@ class vgg16(Network):
         if is_training:
             # fc7 = slim.dropout(fc7, keep_prob=0.5, is_training=True, scope='dropout7')
             fc7_cbp = slim.dropout(fc7_cbp, keep_prob=0.5, is_training=True, scope='cbp_dropout7')
-        # 这里用了两次全连接层
-        # 如果是在训练过程中，为了提高效果，每个全连接层后都加了一层dropout
-        # 之后进行框选预测
+        
 
         # scores and predictions
         cls_score = slim.fully_connected(fc7_cbp, self._num_classes, weights_initializer=initializer, trainable=is_training, activation_fn=None, scope='cls_score')
