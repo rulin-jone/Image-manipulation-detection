@@ -18,9 +18,7 @@ class vgg16(Network):
         # 通过这个函数建立神经网络，包括特征提取，池化，训练等
         with tf.variable_scope('vgg_16', 'vgg_16'):
 
-            # 选择初始设定项initializer
-            # 通过cfg.FLAGS.initializer对滤波器进行选择
-            # 选择使用截断的normal initializer或者随机的normal initializer
+            
             if cfg.FLAGS.initializer == "truncated":
                 initializer = tf.truncated_normal_initializer(mean=0.0, stddev=0.01)
                 initializer_bbox = tf.truncated_normal_initializer(mean=0.0, stddev=0.001)
@@ -236,16 +234,16 @@ class vgg16(Network):
             neg = ((x+2) + abs(x + 2)) / 2 - 2
             return -(2 - neg + abs(2- neg)) / 2 + 2
 
-        # main network
+       
         # 用于构建SRM网络，提取图片噪声特征
 
         # layer SRM
-        # 噪声流输入；分析图像中的局部噪声特征，先让输入RGB图像通过一个 SRM 过滤层
+        
         noisenet = slim.conv2d(self._image, 3, [5, 5], trainable=False, weights_initializer=initializer_srm,
                           activation_fn=None, padding='SAME', stride=1, scope='srm')
         net = truncate_2(noisenet)
 
-        # 对噪声流进行卷积
+       
         # Noise layer1
         net = slim.repeat(net, 2, slim.conv2d, 64, [3, 3], trainable=is_training, weights_initializer=initializer, scope='conv1n')
         net = slim.max_pool2d(net, [2, 2], padding='SAME', scope='pool1n')
@@ -284,19 +282,10 @@ class vgg16(Network):
         return net
 
 
-    """
-    RGB 流和噪声流共用 RPN 网络生成的 region proposals，RPN 网络只将 RGB 特征作为输入。
-    Faster R-CNN 中的 RPN（Region Proposal Network）负责 propose 可能包含相关目标的图像区域，
-    其经过改造后可以执行图像处理检测。
-    """
 
     def build_rpn(self, net, is_training, initializer):
-        # 建立一个RPN网络来提供候选区域的标注和训练，用于标注被修改区域
-        """
-        利用anchor在图片上的滑动，与512个3x3的核做卷积，生成全连接层：
-        1预测proposal的中心锚点对应的坐标xy以及宽高wh
-        2判断proposal区域是前景还是背景
-        """
+       
+       
 
         # 构建anchors
         self._anchor_component()
@@ -308,17 +297,13 @@ class vgg16(Network):
 
         self._act_summaries.append(rpn)
         rpn_cls_score = slim.conv2d(rpn, self._num_anchors * 2, [1, 1], trainable=is_training, weights_initializer=initializer, padding='VALID', activation_fn=None, scope='rpn_cls_score')
-        # 这里不进行补0，且不使用激活函数
-        # 与18个1x1的filter进行卷积，x2表示每个anchor对应2个score，分别表示前景或背景
+        
 
         # Change it so that the score has 2 as its channel size
         rpn_cls_score_reshape = self._reshape_layer(rpn_cls_score, 2, 'rpn_cls_score_reshape')
         rpn_cls_prob_reshape = self._softmax_layer(rpn_cls_score_reshape, "rpn_cls_prob_reshape")
         rpn_cls_prob = self._reshape_layer(rpn_cls_prob_reshape, self._num_anchors * 2, "rpn_cls_prob")
-        # 进行reshape->softmax->reshape处理获取目标是否是物体的预测及得分
-        # 输出rpn_cls_prob（前景和背景的概率）
-        # 这里没有输出rpn_cls_pred（预测结果）
-        # 需要监督的信息是Y=0,1，表示这个区域是否是ground truth。
+      
 
         rpn_bbox_pred = slim.conv2d(rpn, self._num_anchors * 4, [1, 1], trainable=is_training, weights_initializer=initializer, padding='VALID', activation_fn=None, scope='rpn_bbox_pred')
         # 与9x4个1x1的filter卷积，得到anchor box的坐标信息，其实是anchor的偏移量
