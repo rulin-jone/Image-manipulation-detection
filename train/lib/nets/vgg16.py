@@ -86,13 +86,12 @@ class vgg16(Network):
         variables_to_restore = []
         noise_variable = {}
         for v in variables:
-            # 排除conv权重对应的vgg16中对应的fc权重
-            # exclude the conv weights that are fc weights in vgg16
+           
             if v.name == 'vgg_16/fc6/weights:0' or v.name == 'vgg_16/fc7/weights:0' \
                     or v.name == 'vgg_16/cbp_fc6/weights:0' or v.name == 'vgg_16/cbp_fc7/weights:0':
                 self._variables_to_fix[v.name] = v
                 continue
-            # 排除第一层将RGB转换为BGR的卷积层
+           
             if v.name == 'vgg_16/conv1/conv1_1/weights:0' or v.name == 'vgg_16/conv1n/conv1n_1/weights:0':
                 self._variables_to_fix[v.name] = v
                 continue
@@ -188,37 +187,13 @@ class vgg16(Network):
                 #                    tf.reverse(noise_conv1_rgb, [2])))
 
     def build_head(self, is_training):
-        # main network
+        
         # 用于构建net网络，作为RGB特征的提取层,提取输入图片的RGB特征
-        # RGB 流输入:对可见的篡改痕迹（例如：物体边界经常出现的高对比度）进行建模，并将边界框（bounding boxes）回归为ground-truth
-
+       
         # layer1
         net = slim.repeat(self._image, 2, slim.conv2d, 64, [3, 3], trainable=False, scope='conv1')
         net = slim.max_pool2d(net, [2, 2], padding='SAME', scope='pool1')
-        # layer1中以self._image作为网络输入，设置2个64核3x3的卷积层和一个2*2的最大池化层
-        """
-        这里通过slim.repeat()函数进行设置
-        slim.conv2d(inputs, 256, [3, 3], scope='conv1_1')
-        前三个参数依次为网络的输入，输出的通道，卷积核大小。除此之外，还有几个经常被用到的参数：
-        stride : 做卷积时的步长
-        padding : 补零的方式，例如'SAME'
-        activation_fn : 激活函数，默认是nn.relu
-        normalizer_fn : 正则化函数，默认为None，这里可以设置为batch normalization，函数用slim.batch_norm
-        normalizer_params : slim.batch_norm中的参数，以字典形式表示
-        weights_initializer : 权重的初始化器，initializers.xavier_initializer()
-        weights_regularizer : 权重的正则化器，一般不怎么用到
-        biases_initializer : 如果之前有batch norm，那么这个及下面一个就不用管了
-        biases_regularizer : 
-        trainable : 参数是否可训练，默认为True
-        
-        
-        conv2d 的参数设置：
-        输入数据（NHWC），卷积核大小，卷积步长（默认为 1）补零方式（默认为 SAME）
-        输出 channel 数：若不设置为 None，则添加一个 pointwise convolution，卷积核大小和步长均为 1
-        激活函数（默认为 relu）、命名空间
-        权重和偏置的初始化（默认为 xavier 和 0）、正则化参数
-        BN 以及其参数的设置（可选）
-        """
+       
 
         # layer2
         net = slim.repeat(net, 2, slim.conv2d, 128, [3, 3], trainable=False, scope='conv2')
