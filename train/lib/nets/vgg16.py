@@ -1,3 +1,6 @@
+##########################
+by rulin only for studying
+##########################
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 from lib.utils.compact_bilinear_polling import compact_bilinear_pooling_layer
